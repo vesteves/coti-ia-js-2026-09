@@ -1,0 +1,10 @@
+[
+  { "id": "bedroom-001", "name": "Suíte Araçá", "description": "Suíte térrea próxima ao jardim", "capacity": 2, "price": 520, "amenities": ["ar-condicionado", "frigobar", "rede"] },
+  { "id": "bedroom-002", "name": "Suíte Aventureiro", "description": "Suíte com varanda e vista parcial para o mar", "capacity": 2, "price": 610, "amenities": ["ar-condicionado", "frigobar", "varanda"] },
+  { "id": "bedroom-003", "name": "Suíte Dois Rios", "description": "Suíte ampla para pequenas famílias", "capacity": 3, "price": 720, "amenities": ["ar-condicionado", "frigobar", "sofá-cama"] },
+  { "id": "bedroom-004", "name": "Suíte Lopes Mendes", "description": "Suíte superior com vista para o mar", "capacity": 2, "price": 790, "amenities": ["ar-condicionado", "frigobar", "vista para o mar"] },
+  { "id": "bedroom-005", "name": "Chalé Parnaioca", "description": "Chalé reservado com dois ambientes", "capacity": 4, "price": 980, "amenities": ["ar-condicionado", "minicozinha", "varanda"] },
+  { "id": "bedroom-006", "name": "Quarto Abraão", "description": "Quarto econômico próximo à recepção", "capacity": 2, "price": 390, "amenities": ["ventilador", "frigobar"] },
+  { "id": "bedroom-007", "name": "Quarto Palmas", "description": "Quarto familiar no andar térreo", "capacity": 4, "price": 680, "amenities": ["ar-condicionado", "beliche", "frigobar"] },
+  { "id": "bedroom-008", "name": "Suíte Caxadaço", "description": "Suíte compacta e silenciosa nos fundos", "capacity": 2, "price": 560, "amenities": ["ar-condicionado", "frigobar", "mesa de trabalho"] }
+]

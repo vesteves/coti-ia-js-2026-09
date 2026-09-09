@@ -1,0 +1,14 @@
+[
+  { "id": "guest-001", "name": "João Silva", "email": "joao.silva@example.com", "phone": "+55 21 99911-1001", "city": "Rio de Janeiro", "preferences": ["café sem lactose", "quarto silencioso"] },
+  { "id": "guest-002", "name": "Mariana Costa", "email": "mariana.costa@example.com", "phone": "+55 11 99922-1002", "city": "São Paulo", "preferences": ["alimentação vegetariana"] },
+  { "id": "guest-003", "name": "Carlos Mendes", "email": "carlos.mendes@example.com", "phone": "+55 31 99933-1003", "city": "Belo Horizonte", "preferences": ["travesseiro extra"] },
+  { "id": "guest-004", "name": "Ana Beatriz Lima", "email": "ana.lima@example.com", "phone": "+55 41 99944-1004", "city": "Curitiba", "preferences": ["andar térreo"] },
+  { "id": "guest-005", "name": "Rafael Oliveira", "email": "rafael.oliveira@example.com", "phone": "+55 51 99955-1005", "city": "Porto Alegre", "preferences": [] },
+  { "id": "guest-006", "name": "Fernanda Alves", "email": "fernanda.alves@example.com", "phone": "+55 71 99966-1006", "city": "Salvador", "preferences": ["sem glúten", "late checkout"] },
+  { "id": "guest-007", "name": "Lucas Martins", "email": "lucas.martins@example.com", "phone": "+55 61 99977-1007", "city": "Brasília", "preferences": ["berço"] },
+  { "id": "guest-008", "name": "Juliana Rocha", "email": "juliana.rocha@example.com", "phone": "+55 85 99988-1008", "city": "Fortaleza", "preferences": ["vista para o mar"] },
+  { "id": "guest-009", "name": "Pedro Nascimento", "email": "pedro.nascimento@example.com", "phone": "+55 81 99999-1009", "city": "Recife", "preferences": ["transfer de barco"] },
+  { "id": "guest-010", "name": "Camila Ferreira", "email": "camila.ferreira@example.com", "phone": "+55 27 99810-1010", "city": "Vitória", "preferences": ["alimentação vegana"] },
+  { "id": "guest-011", "name": "Diego Santos", "email": "diego.santos@example.com", "phone": "+55 48 99811-1011", "city": "Florianópolis", "preferences": ["cama extra"] },
+  { "id": "guest-012", "name": "Patrícia Gomes", "email": "patricia.gomes@example.com", "phone": "+55 19 99812-1012", "city": "Campinas", "preferences": ["check-in antecipado"] }
+]

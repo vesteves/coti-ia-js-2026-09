@@ -1,0 +1,20 @@
+[
+  { "id": "reservation-001", "guestId": "guest-001", "bedroomId": "bedroom-008", "checkinAt": "2026-10-09", "checkoutAt": "2026-10-12", "guests": 1, "price": 1680, "status": "confirmed", "specialRequests": ["café sem lactose", "chegada no último barco"] },
+  { "id": "reservation-002", "guestId": "guest-002", "bedroomId": "bedroom-002", "checkinAt": "2026-10-10", "checkoutAt": "2026-10-14", "guests": 2, "price": 2440, "status": "confirmed", "specialRequests": ["jantar vegetariano"] },
+  { "id": "reservation-003", "guestId": "guest-003", "bedroomId": "bedroom-001", "checkinAt": "2026-10-15", "checkoutAt": "2026-10-18", "guests": 2, "price": 1560, "status": "pending", "specialRequests": ["dois travesseiros extras"] },
+  { "id": "reservation-004", "guestId": "guest-004", "bedroomId": "bedroom-003", "checkinAt": "2026-11-02", "checkoutAt": "2026-11-06", "guests": 3, "price": 2880, "status": "confirmed", "specialRequests": [] },
+  { "id": "reservation-005", "guestId": "guest-005", "bedroomId": "bedroom-006", "checkinAt": "2026-09-01", "checkoutAt": "2026-09-04", "guests": 1, "price": 1170, "status": "completed", "specialRequests": [] },
+  { "id": "reservation-006", "guestId": "guest-006", "bedroomId": "bedroom-004", "checkinAt": "2026-11-12", "checkoutAt": "2026-11-16", "guests": 2, "price": 3160, "status": "confirmed", "specialRequests": ["opções sem glúten", "checkout às 14h"] },
+  { "id": "reservation-007", "guestId": "guest-007", "bedroomId": "bedroom-005", "checkinAt": "2026-12-05", "checkoutAt": "2026-12-10", "guests": 3, "price": 4900, "status": "confirmed", "specialRequests": ["berço para bebê"] },
+  { "id": "reservation-008", "guestId": "guest-008", "bedroomId": "bedroom-004", "checkinAt": "2026-12-12", "checkoutAt": "2026-12-15", "guests": 2, "price": 2370, "status": "pending", "specialRequests": ["comemoração de aniversário"] },
+  { "id": "reservation-009", "guestId": "guest-009", "bedroomId": "bedroom-001", "checkinAt": "2027-01-08", "checkoutAt": "2027-01-11", "guests": 2, "price": 1560, "status": "confirmed", "specialRequests": ["transfer no cais"] },
+  { "id": "reservation-010", "guestId": "guest-010", "bedroomId": "bedroom-002", "checkinAt": "2027-01-15", "checkoutAt": "2027-01-19", "guests": 2, "price": 2440, "status": "cancelled", "specialRequests": ["café da manhã vegano"] },
+  { "id": "reservation-011", "guestId": "guest-011", "bedroomId": "bedroom-007", "checkinAt": "2027-01-20", "checkoutAt": "2027-01-24", "guests": 4, "price": 2720, "status": "confirmed", "specialRequests": ["cama extra"] },
+  { "id": "reservation-012", "guestId": "guest-012", "bedroomId": "bedroom-003", "checkinAt": "2027-02-03", "checkoutAt": "2027-02-06", "guests": 2, "price": 2160, "status": "pending", "specialRequests": ["check-in às 11h"] },
+  { "id": "reservation-013", "guestId": "guest-001", "bedroomId": "bedroom-001", "checkinAt": "2025-08-10", "checkoutAt": "2025-08-14", "guests": 2, "price": 2080, "status": "completed", "specialRequests": [] },
+  { "id": "reservation-014", "guestId": "guest-003", "bedroomId": "bedroom-006", "checkinAt": "2025-12-18", "checkoutAt": "2025-12-21", "guests": 1, "price": 1170, "status": "completed", "specialRequests": ["chegada após as 20h"] },
+  { "id": "reservation-015", "guestId": "guest-005", "bedroomId": "bedroom-008", "checkinAt": "2026-03-20", "checkoutAt": "2026-03-23", "guests": 2, "price": 1680, "status": "cancelled", "specialRequests": [] },
+  { "id": "reservation-016", "guestId": "guest-008", "bedroomId": "bedroom-005", "checkinAt": "2027-02-14", "checkoutAt": "2027-02-19", "guests": 4, "price": 4900, "status": "confirmed", "specialRequests": ["decoração romântica", "passeio de barco"] },
+  { "id": "reservation-017", "guestId": "guest-010", "bedroomId": "bedroom-007", "checkinAt": "2027-03-05", "checkoutAt": "2027-03-09", "guests": 3, "price": 2720, "status": "confirmed", "specialRequests": ["alimentação vegana"] },
+  { "id": "reservation-018", "guestId": "guest-012", "bedroomId": "bedroom-002", "checkinAt": "2027-03-12", "checkoutAt": "2027-03-15", "guests": 2, "price": 1830, "status": "pending", "specialRequests": [] }
+]
