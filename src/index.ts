@@ -1,9 +1,14 @@
 import express, { Request, Response } from 'express'
 import { bedrooms, getPopulatedReservations, guests } from './data/index.js'
 import { reviewAnalyzeSchema } from './review.schema.js'
+import {
+  validationMiddleware
+} from './validation.middleware.js'
 import OpenAI from "openai";
 import 'dotenv/config'
 import { zodTextFormat } from 'openai/helpers/zod.mjs';
+import { runAgent } from './tool-calling.js';
+import { chatSchema } from './chat.schema.js';
 
 const app = express()
 
@@ -116,63 +121,17 @@ app.post('/review/analyze', async (req: Request, res: Response) => {
 })
 
 
-
-const context: any = []
-
 // 272k context window
 
-app.post('/chat', async (req: Request, res: Response) => {
-  const message = req.body.message
+app.post('/chat', validationMiddleware(chatSchema), async (req: Request, res: Response) => {
+  const message = res.locals.validation.message
+  const conversationId = res.locals.validation.conversationId
 
-  if (!message) {
-    res.status(400).json({
-      error: 'É necessário que tenha pelo menos uma mensagem'
-    })
-
-    return
-  }
-
-  const response = await client.responses.create({
-    model: 'gpt-5.6-luna',
-    //   instructions: `
-    //     Você é o assistente virtual da Pousada Parnaioca.
-
-    //     Responda sempre em português.
-
-    //     Responda somente a perguntas relacionadas à pousada,
-    //     hospedagem, reservas, quartos e serviços turísticos relacionadas à Pousada Parnaioca.
-
-    //     Quando uma pergunta depender de dados que não foram
-    //     fornecidos no contexto, diga claramente que não possui
-    //     acesso a essa informação.
-
-    //     Não invente informações sobre hóspedes, reservas,
-    //     quartos, preços, políticas ou serviços.
-
-    //     Não responda à nenhuma pergunta que não esteja no contexto da Pousada Parnaioca.
-    // `,
-    input: [
-      ...context,
-      {
-        role: 'user',
-        content: message
-      }
-    ]
-  })
-
-  context.push({
-    role: 'user',
-    content: message
-  })
-
-  context.push({
-    role: 'assistant',
-    content: response.output_text
-  })
+  const response = await runAgent(message, conversationId)
 
   res.json({
     message: 'Resposta gerada',
-    data: response.output_text
+    data: response
   })
 })
 

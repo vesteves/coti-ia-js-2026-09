@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import 'dotenv/config'
-import { guests, reservations } from './data/index.js'
+import { bedrooms, guests, reservations } from './data/index.js'
+import {
+  toResponseInputItems
+} from 'openai/lib/responses/ResponseInputItems'
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || ''
@@ -23,6 +26,14 @@ function findReservationsByGuestId(guestId: string) {
   )
 }
 
+function getBedroomById(bedroomId: string) {
+  console.log('FUNÇÃO getBedroomById EXECUTADA')
+
+  return bedrooms.find(
+    bedroom => bedroom.id === bedroomId
+  )
+}
+
 type ToolHandler = (
   argumentsData: Record<string, unknown>
 ) => unknown
@@ -42,6 +53,14 @@ const toolHandlers: Record<string, ToolHandler> = {
     }
 
     return findReservationsByGuestId(argumentsData.guestId)
+  },
+
+  getBedroomById: argumentsData => {
+    if (typeof argumentsData.bedroomId !== 'string') {
+      throw new Error('O argumento bedroomId é obrigatório')
+    }
+
+    return getBedroomById(argumentsData.bedroomId)
   }
 }
 
@@ -105,11 +124,45 @@ const tools: OpenAI.Responses.Tool[] = [
       additionalProperties: false
     },
     strict: true
+  },
+
+  {
+    type: 'function',
+    name: 'getBedroomById',
+    description: `
+      Consulta os dados completos de um quarto pelo ID.
+      Use quando precisar apresentar nome, descrição,
+      capacidade, preço ou comodidades do quarto.
+    `,
+    parameters: {
+      type: 'object',
+      properties: {
+        bedroomId: {
+          type: 'string',
+          description: 'ID do quarto, como bedroom-008'
+        }
+      },
+      required: ['bedroomId'],
+      additionalProperties: false
+    },
+    strict: true
   }
 ]
 
-async function runAgent(message: string) {
+const conversations = new Map<
+  string,
+  OpenAI.Responses.ResponseInput
+>()
+
+export async function runAgent(
+  message: string,
+  conversationId: string
+) {
+  const previousInput =
+    conversations.get(conversationId) ?? []
+
   const input: OpenAI.Responses.ResponseInput = [
+    ...previousInput,
     {
       role: 'user',
       content: message
@@ -138,14 +191,13 @@ async function runAgent(message: string) {
       tools
     })
 
+    input.push(
+      ...toResponseInputItems(response.output)
+    )
+
     let hasFunctionCall = false
 
     for (const item of response.output) {
-      if (item.type === 'reasoning') {
-        input.push(item)
-        continue
-      }
-
       if (item.type !== 'function_call') {
         continue
       }
@@ -158,8 +210,6 @@ async function runAgent(message: string) {
           `Limite de ${MAX_TOOL_CALLS} chamadas de ferramentas excedido`
         )
       }
-
-      input.push(item)
 
       console.log('TOOL CALL', {
         name: item.name,
@@ -181,6 +231,8 @@ async function runAgent(message: string) {
     }
 
     if (!hasFunctionCall) {
+      conversations.set(conversationId, input)
+
       return response.output_text
     }
   }
@@ -190,7 +242,7 @@ async function runAgent(message: string) {
   )
 }
 
-const answer = await runAgent('Considerando a data de 6 de setembro de 2026, qual é a próxima reserva de João?')
-console.log(answer)
+// const answer = await runAgent('Considerando a data de 6 de setembro de 2026, qual é a próxima reserva de João?')
+// console.log(answer)
 
 // response.output_text = response.output[1].content[0].text
