@@ -4,6 +4,8 @@ import { bedrooms, guests, reservations } from './data/index.js'
 import {
   toResponseInputItems
 } from 'openai/lib/responses/ResponseInputItems'
+import { AuthContext, UserRole } from "./auth.middleware.js";
+import { requestReservationCancellation } from "./approval.store.js";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || ''
@@ -34,8 +36,44 @@ function getBedroomById(bedroomId: string) {
   )
 }
 
+type ToolName =
+  | 'findGuest'
+  | 'findReservationsByGuestId'
+  | 'getBedroomById'
+  | 'requestReservationCancellation'
+
+const toolPermissions: Record<UserRole, ToolName[]> = {
+  guest: [
+    'getBedroomById'
+  ],
+
+  employee: [
+    'findGuest',
+    'findReservationsByGuestId',
+    'getBedroomById',
+    'requestReservationCancellation'
+  ],
+
+  manager: [
+    'findGuest',
+    'findReservationsByGuestId',
+    'getBedroomById',
+    'requestReservationCancellation'
+  ]
+}
+
+function isToolAllowed(
+  role: UserRole,
+  toolName: string
+): toolName is ToolName {
+  return toolPermissions[role].includes(
+    toolName as ToolName
+  )
+}
+
 type ToolHandler = (
-  argumentsData: Record<string, unknown>
+  argumentsData: Record<string, unknown>,
+  auth: AuthContext
 ) => unknown
 
 const toolHandlers: Record<string, ToolHandler> = {
@@ -61,10 +99,40 @@ const toolHandlers: Record<string, ToolHandler> = {
     }
 
     return getBedroomById(argumentsData.bedroomId)
+  },
+
+  requestReservationCancellation: (
+    argumentsData,
+    auth
+  ) => {
+    if (
+      typeof argumentsData.reservationId !== 'string'
+    ) {
+      throw new Error(
+        'O argumento reservationId é obrigatório'
+      )
+    }
+
+    const approval = requestReservationCancellation(
+      argumentsData.reservationId,
+      auth.userId
+    )
+
+    return {
+      message:
+        'Cancelamento aguardando aprovação humana',
+      approval
+    }
   }
 }
 
-function executeTool(name: string, argumentsJson: string) {
+function executeTool(name: string, argumentsJson: string, auth: AuthContext) {
+  if (!isToolAllowed(auth.role, name)) {
+    return {
+      error: `O perfil ${auth.role} não está autorizado a executar ${name}`
+    }
+  }
+
   try {
     const handler = toolHandlers[name]
 
@@ -79,7 +147,7 @@ function executeTool(name: string, argumentsJson: string) {
       unknown
     >
 
-    return handler(argumentsData)
+    return handler(argumentsData, auth)
   } catch (error) {
     return {
       error:
@@ -146,6 +214,32 @@ const tools: OpenAI.Responses.Tool[] = [
       additionalProperties: false
     },
     strict: true
+  },
+
+  {
+    type: 'function',
+    name: 'requestReservationCancellation',
+    description: `
+      Solicita o cancelamento de uma reserva.
+
+      Esta ferramenta não cancela a reserva imediatamente.
+      Ela cria uma solicitação pendente que precisa ser
+      aprovada por um gerente.
+
+      Informe ao usuário o ID da aprovação retornada.
+    `,
+    parameters: {
+      type: 'object',
+      properties: {
+        reservationId: {
+          type: 'string',
+          description: 'ID da reserva que será cancelada'
+        }
+      },
+      required: ['reservationId'],
+      additionalProperties: false
+    },
+    strict: true
   }
 ]
 
@@ -156,10 +250,14 @@ const conversations = new Map<
 
 export async function runAgent(
   message: string,
-  conversationId: string
+  conversationId: string,
+  auth: AuthContext
 ) {
+  const conversationKey =
+    `${auth.userId}:${conversationId}`
+
   const previousInput =
-    conversations.get(conversationId) ?? []
+    conversations.get(conversationKey) ?? []
 
   const input: OpenAI.Responses.ResponseInput = [
     ...previousInput,
@@ -218,7 +316,8 @@ export async function runAgent(
 
       const toolResult = executeTool(
         item.name,
-        item.arguments
+        item.arguments,
+        auth
       )
 
       console.log('TOOL RESULT', toolResult)
@@ -231,7 +330,7 @@ export async function runAgent(
     }
 
     if (!hasFunctionCall) {
-      conversations.set(conversationId, input)
+      conversations.set(conversationKey, input)
 
       return response.output_text
     }

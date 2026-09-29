@@ -9,6 +9,8 @@ import 'dotenv/config'
 import { zodTextFormat } from 'openai/helpers/zod.mjs';
 import { runAgent } from './tool-calling.js';
 import { chatSchema } from './chat.schema.js';
+import { authMiddleware } from './auth.middleware.js';
+import { decideCancellation } from './approval.store.js';
 
 const app = express()
 
@@ -123,17 +125,72 @@ app.post('/review/analyze', async (req: Request, res: Response) => {
 
 // 272k context window
 
-app.post('/chat', validationMiddleware(chatSchema), async (req: Request, res: Response) => {
+app.post('/chat', authMiddleware, validationMiddleware(chatSchema), async (req: Request, res: Response) => {
   const message = res.locals.validation.message
   const conversationId = res.locals.validation.conversationId
+  const auth = res.locals.auth
 
-  const response = await runAgent(message, conversationId)
+  const response = await runAgent(message, conversationId, auth)
 
   res.json({
     message: 'Resposta gerada',
     data: response
   })
 })
+
+app.post(
+  '/approvals/:approvalId',
+  authMiddleware,
+  (req: Request, res: Response) => {
+    const auth = res.locals.auth
+
+    if (auth.role !== 'manager') {
+      res.status(403).json({
+        message:
+          'Somente um gerente pode decidir esta solicitação',
+        data: null
+      })
+
+      return
+    }
+
+    const decision = req.body.decision
+
+    if (
+      decision !== 'approved' &&
+      decision !== 'rejected'
+    ) {
+      res.status(400).json({
+        message:
+          'A decisão deve ser approved ou rejected',
+        data: null
+      })
+
+      return
+    }
+
+    try {
+      const result = decideCancellation(
+        req.params.approvalId as string,
+        decision,
+        auth.userId
+      )
+
+      res.json({
+        message: `Cancelamento ${decision}`,
+        data: result
+      })
+    } catch (error) {
+      res.status(400).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao processar aprovação',
+        data: null
+      })
+    }
+  }
+)
 
 app.listen(port, () => {
   console.log(`Servidor ON! http://localhost:${port}`)
