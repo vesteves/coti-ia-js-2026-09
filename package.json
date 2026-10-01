@@ -8,7 +8,9 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "prod": "node dist/index.js"
+    "prod": "node dist/index.js",
+    "rag:ingest": "tsx src/rag/ingest-documents.ts",
+    "rag:search": "tsx src/rag/search-documents.ts"
   },
   "engines": {
     "node": ">=24"
