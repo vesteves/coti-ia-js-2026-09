@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const reviewAnalyzeSchema = z.object({
+export const reviewAnalysisSchema = z.object({
   sentiment: z.enum([
     'positive',
     'neutral',
@@ -20,4 +20,13 @@ export const reviewAnalyzeSchema = z.object({
   ])
 })
 
-export type ReviewAnalysis = z.infer<typeof reviewAnalyzeSchema>
+export const analyzeReviewSchema = z.object({
+  review: z.string({
+    error: 'O campo review deve ser um texto'
+  }).trim().min(1, {
+    error: 'O campo review é obrigatório'
+  })
+})
+
+export type ReviewAnalysis = z.infer<typeof reviewAnalysisSchema>
+export type AnalyzeReview = z.infer<typeof analyzeReviewSchema>

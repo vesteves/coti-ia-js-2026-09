@@ -13,3 +13,5 @@ export const chatSchema = z.object({
     error: 'O campo conversationId é obrigatório'
   })
 })
+
+export type Chat = z.infer<typeof chatSchema>

@@ -1,27 +1,42 @@
-import OpenAI from "openai";
 import 'dotenv/config'
-import { guests, reservations, bedrooms } from './data/index.js'
+import OpenAI from 'openai'
+import { guests, reservations } from './data/index.js'
+
+const apiKey = process.env.OPENAI_API_KEY
+
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY não foi configurada')
+}
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ''
+  apiKey
 })
 
-const context = [
+const model = process.env.OPENAI_MODEL || 'gpt-5.6-luna'
+
+const context = {
   guests,
-  reservations,
-  bedrooms
-]
+  reservations
+}
 
-const response = await client.responses.create({
-  model: 'gpt-5.6-luna',
+const firstResponse = await client.responses.create({
+  model,
   input: `
-  Dados da Pousada Parnaioca:
+    Dados da Pousada Parnaioca:
 
-  ${JSON.stringify(context)}
+    ${JSON.stringify(context)}
 
-  Pergunta: De acordo com os dados, sugira quando o João Silva fará uma nova reserva além das que estão nos dados.
+    Pergunta: O João Silva possui alguma reserva?
   `
 })
 
-console.log(response.output_text)
-console.log(response.usage)
+console.log('PRIMEIRA RESPOSTA')
+console.log(firstResponse.output_text)
+
+const secondResponse = await client.responses.create({
+  model,
+  input: 'Qual é o nome do quarto da próxima reserva de João Silva?'
+})
+
+console.log('SEGUNDA RESPOSTA')
+console.log(secondResponse.output_text)

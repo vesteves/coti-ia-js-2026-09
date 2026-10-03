@@ -1,23 +1,67 @@
-import OpenAI from "openai";
 import 'dotenv/config'
-import { bedrooms, guests, reservations } from './data/index.js'
+import OpenAI from 'openai'
 import {
   toResponseInputItems
 } from 'openai/lib/responses/ResponseInputItems'
-import { AuthContext, UserRole } from "./auth.middleware.js";
-import { requestReservationCancellation } from "./approval.store.js";
+import { bedrooms, guests, reservations } from './data/index.js'
+import {
+  AuthContext,
+  UserRole
+} from './auth.middleware.js'
+import {
+  requestReservationCancellation
+} from './approval.store.js'
+
+function getRequiredEnvironmentVariable(
+  name: string
+): string {
+  const value = process.env[name]
+
+  if (!value) {
+    throw new Error(
+      `${name} não foi configurada`
+    )
+  }
+
+  return value
+}
+
+const apiKey = getRequiredEnvironmentVariable('OPENAI_API_KEY')
+
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY não foi configurada')
+}
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ''
+  apiKey
 })
 
-const MAX_ROUNDS = 5
-const MAX_TOOL_CALLS = 10
+const model = process.env.OPENAI_MODEL || 'gpt-5.6-luna'
+
+const publicVectorStoreId =
+  getRequiredEnvironmentVariable('OPENAI_PUBLIC_VECTOR_STORE_ID')
+
+const internalVectorStoreId =
+  getRequiredEnvironmentVariable('OPENAI_INTERNAL_VECTOR_STORE_ID')
+
+if (!publicVectorStoreId) {
+  throw new Error(
+    'OPENAI_PUBLIC_VECTOR_STORE_ID não foi configurado'
+  )
+}
+
+if (!internalVectorStoreId) {
+  throw new Error(
+    'OPENAI_INTERNAL_VECTOR_STORE_ID não foi configurado'
+  )
+}
 
 function findGuest(name: string) {
-  console.log('----- FUNÇÃO findGuests EXECUTADA -----')
+  console.log('FUNÇÃO findGuest EXECUTADA')
 
-  return guests.find(guest => guest.name.toLowerCase().includes(name.toLowerCase()))
+  return guests.find(guest =>
+    guest.name.toLowerCase().includes(name.toLowerCase())
+  )
 }
 
 function findReservationsByGuestId(guestId: string) {
@@ -126,14 +170,17 @@ const toolHandlers: Record<string, ToolHandler> = {
   }
 }
 
-function executeTool(name: string, argumentsJson: string, auth: AuthContext) {
-  if (!isToolAllowed(auth.role, name)) {
-    return {
-      error: `O perfil ${auth.role} não está autorizado a executar ${name}`
-    }
-  }
-
+function executeTool(
+  name: string,
+  argumentsJson: string,
+  auth: AuthContext
+) {
   try {
+    if (!isToolAllowed(auth.role, name)) {
+      return {
+        error: `O perfil ${auth.role} não está autorizado a executar ${name}`
+      }
+    }
     const handler = toolHandlers[name]
 
     if (!handler) {
@@ -158,7 +205,7 @@ function executeTool(name: string, argumentsJson: string, auth: AuthContext) {
   }
 }
 
-const tools: OpenAI.Responses.Tool[] = [
+const functionTools: OpenAI.Responses.Tool[] = [
   {
     type: 'function',
     name: 'findGuest',
@@ -193,7 +240,6 @@ const tools: OpenAI.Responses.Tool[] = [
     },
     strict: true
   },
-
   {
     type: 'function',
     name: 'getBedroomById',
@@ -220,14 +266,14 @@ const tools: OpenAI.Responses.Tool[] = [
     type: 'function',
     name: 'requestReservationCancellation',
     description: `
-      Solicita o cancelamento de uma reserva.
+    Solicita o cancelamento de uma reserva.
 
-      Esta ferramenta não cancela a reserva imediatamente.
-      Ela cria uma solicitação pendente que precisa ser
-      aprovada por um gerente.
+    Esta ferramenta não cancela a reserva imediatamente.
+    Ela cria uma solicitação pendente que precisa ser
+    aprovada por um gerente.
 
-      Informe ao usuário o ID da aprovação retornada.
-    `,
+    Informe ao usuário o ID da aprovação retornada.
+  `,
     parameters: {
       type: 'object',
       properties: {
@@ -243,16 +289,60 @@ const tools: OpenAI.Responses.Tool[] = [
   }
 ]
 
+function getVectorStoreIdsForRole(
+  role: UserRole
+): string[] {
+  if (role === 'guest') {
+    return [
+      publicVectorStoreId
+    ]
+  }
+
+  return [
+    publicVectorStoreId,
+    internalVectorStoreId
+  ]
+}
+
+function getToolsForRole(
+  role: UserRole
+): OpenAI.Responses.Tool[] {
+  const allowedFunctionTools =
+    functionTools.filter(tool => {
+      if (tool.type !== 'function') {
+        return false
+      }
+
+      return isToolAllowed(role, tool.name)
+    })
+
+  const fileSearchTool:
+    OpenAI.Responses.FileSearchTool = {
+    type: 'file_search',
+    vector_store_ids:
+      getVectorStoreIdsForRole(role),
+    max_num_results: 3
+  }
+
+  return [
+    ...allowedFunctionTools,
+    fileSearchTool
+  ]
+}
+
+const MAX_ROUNDS = 5
+const MAX_TOOL_CALLS = 10
+
 const conversations = new Map<
   string,
   OpenAI.Responses.ResponseInput
 >()
 
 export async function runAgent(
-  message: string,
+  question: string,
   conversationId: string,
   auth: AuthContext
-) {
+): Promise<string> {
   const conversationKey =
     `${auth.userId}:${conversationId}`
 
@@ -263,7 +353,7 @@ export async function runAgent(
     ...previousInput,
     {
       role: 'user',
-      content: message
+      content: question
     }
   ]
 
@@ -276,17 +366,28 @@ export async function runAgent(
     console.log(`RODADA ${round}`)
 
     const response = await client.responses.create({
-      model: 'gpt-5.6-luna',
+      model,
       instructions: `
         Você é o assistente da Pousada Parnaioca.
 
-        Use as ferramentas disponíveis quando precisar consultar
-        dados da pousada.
+        Use as function tools quando precisar consultar dados
+        estruturados, como hóspedes, reservas e quartos.
 
-        Não invente informações sobre hóspedes ou reservas.
+        Use file_search quando precisar consultar políticas,
+        regras, passeios, perguntas frequentes ou procedimentos
+        documentados da pousada.
+
+        Não invente informações sobre hóspedes, reservas,
+        políticas ou procedimentos.
+
+        Quando os documentos não contiverem a informação,
+        diga que ela não foi encontrada.
       `,
       input,
-      tools
+      tools: getToolsForRole(auth.role),
+      include: [
+        'file_search_call.results'
+      ]
     })
 
     input.push(
@@ -296,6 +397,20 @@ export async function runAgent(
     let hasFunctionCall = false
 
     for (const item of response.output) {
+      if (item.type === 'file_search_call') {
+        console.log('FILE SEARCH', {
+          queries: item.queries,
+
+          results: item.results?.map(result => ({
+            filename: result.filename,
+            score: result.score,
+            text: result.text
+          }))
+        })
+
+        continue
+      }
+
       if (item.type !== 'function_call') {
         continue
       }
@@ -317,7 +432,7 @@ export async function runAgent(
       const toolResult = executeTool(
         item.name,
         item.arguments,
-        auth
+        auth,
       )
 
       console.log('TOOL RESULT', toolResult)
@@ -340,8 +455,3 @@ export async function runAgent(
     `O agente não terminou após ${MAX_ROUNDS} rodadas`
   )
 }
-
-// const answer = await runAgent('Considerando a data de 6 de setembro de 2026, qual é a próxima reserva de João?')
-// console.log(answer)
-
-// response.output_text = response.output[1].content[0].text

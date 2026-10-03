@@ -1,24 +1,36 @@
 import express, { Request, Response } from 'express'
-import { bedrooms, getPopulatedReservations, guests } from './data/index.js'
-import { reviewAnalyzeSchema } from './review.schema.js'
+import 'dotenv/config'
+import OpenAI from 'openai'
+import { zodTextFormat } from 'openai/helpers/zod'
 import {
   validationMiddleware
 } from './validation.middleware.js'
-import OpenAI from "openai";
-import 'dotenv/config'
-import { zodTextFormat } from 'openai/helpers/zod.mjs';
-import { runAgent } from './tool-calling.js';
-import { chatSchema } from './chat.schema.js';
-import { authMiddleware } from './auth.middleware.js';
-import { decideCancellation } from './approval.store.js';
+import {
+  analyzeReviewSchema,
+  reviewAnalysisSchema
+} from './review.schema.js'
+import { chatSchema } from './chat.schema.js'
+import { bedrooms, getPopulatedReservations, guests } from './data/index.js'
+import { runAgent } from './tool-calling.js'
+import { authMiddleware } from './auth.middleware.js'
+import {
+  decideCancellation
+} from './approval.store.js'
 
 const app = express()
 
-const port = Number(process.env.PORT) || 8000
+const apiKey = process.env.OPENAI_API_KEY
+
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY não foi configurada')
+}
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ''
+  apiKey
 })
+
+const port = Number(process.env.PORT) || 8000
+const model = process.env.OPENAI_MODEL || 'gpt-5.6-luna'
 
 app.use(express.json())
 
@@ -50,21 +62,30 @@ app.get('/reservations', (_req: Request, res: Response) => {
   })
 })
 
-app.post('/review/analyze', async (req: Request, res: Response) => {
-  const message = req.body.review
+app.post(
+  '/chat',
+  authMiddleware,
+  validationMiddleware(chatSchema),
+  async (_req: Request, res: Response) => {
+    const answer = await runAgent(
+      res.locals.validation.message,
+      res.locals.validation.conversationId,
+      res.locals.auth
+    )
 
-  if (!message) {
-    res.status(400).json({
-      error: 'É necessário que tenha pelo menos uma mensagem'
+    res.json({
+      message: 'Resposta gerada com sucesso',
+      data: answer
     })
+  })
 
-    return
-  }
-
-  // Few Shot
-  const response = await client.responses.parse({
-    model: 'gpt-5.6-luna',
-    instructions: `
+app.post(
+  '/reviews/analyze',
+  validationMiddleware(analyzeReviewSchema),
+  async (_req: Request, res: Response) => {
+    const response = await client.responses.parse({
+      model,
+      instructions: `
       Você analisa avaliações dos hóspedes da Pousada Parnaioca.
 
       Quando houver elogios e reclamações na mesma avaliação,
@@ -73,70 +94,58 @@ app.post('/review/analyze', async (req: Request, res: Response) => {
       Quando mais de uma categoria estiver presente,
       escolha aquela relacionada ao problema de maior impacto.
     `,
-    input: [
-      {
-        role: 'user',
-        content: 'O quarto estava impecável e a equipe foi muito atenciosa.'
-      },
-      {
-        role: 'assistant',
-        content: `{
-          "sentiment": "positive",
-          "category": "cleanliness",
-          "priority": "low"
-        }`
-      },
-      {
-        role: 'user',
-        content: 'A praia é linda, mas esperei duas horas para conseguir entrar no quarto.'
-      },
-      {
-        role: 'assistant',
-        content: `{
-          "sentiment": "negative",
-          "category": "service",
-          "priority": "high"
-        }`
-      },
-      {
-        role: 'user',
-        content: message
+      input: [
+        {
+          role: 'user',
+          content: 'O quarto estava impecável e a equipe foi muito atenciosa.'
+        },
+        {
+          role: 'assistant',
+          content: `{
+        "sentiment": "positive",
+        "category": "cleanliness",
+        "priority": "low"
+      }`
+        },
+        {
+          role: 'user',
+          content: 'A praia é linda, mas esperei duas horas para conseguir entrar no quarto.'
+        },
+        {
+          role: 'assistant',
+          content: `{
+        "sentiment": "negative",
+        "category": "service",
+        "priority": "high"
+      }`
+        },
+        {
+          role: 'user',
+          content: res.locals.validation.review
+        }
+      ],
+      text: {
+        format: zodTextFormat(
+          reviewAnalysisSchema,
+          'review_analysis'
+        )
       }
-    ],
-    text: {
-      format: zodTextFormat(
-        reviewAnalyzeSchema,
-        'review_analysis'
-      )
+    })
+
+    if (!response.output_parsed) {
+      res.status(422).json({
+        message: 'Não foi possível analisar a avaliação',
+        data: null
+      })
+
+      return
     }
+
+    res.json({
+      message: 'Avaliação analisada com sucesso',
+      data: response.output_parsed
+    })
   })
-
-  console.log(response.usage)
-
-  // const data = JSON.parse(response.output_text)
-  // console.log(data.category)
-
-  res.json({
-    message: 'Resposta gerada',
-    data: response.output_parsed
-  })
-})
-
-
-// 272k context window
-
-app.post('/chat', authMiddleware, validationMiddleware(chatSchema), async (req: Request, res: Response) => {
-  const message = res.locals.validation.message
-  const conversationId = res.locals.validation.conversationId
-  const auth = res.locals.auth
-
-  const response = await runAgent(message, conversationId, auth)
-
-  res.json({
-    message: 'Resposta gerada',
-    data: response
-  })
-})
 
 app.post(
   '/approvals/:approvalId',

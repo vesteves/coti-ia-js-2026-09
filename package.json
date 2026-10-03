@@ -6,11 +6,20 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "rag:ingest": "tsx src/rag/ingest-documents.ts",
+    "rag:search": "tsx src/rag/search-documents.ts",
+    "rag:answer": "tsx src/rag/file-search.ts",
+    "mcp:server": "tsx src/mcp/server.ts",
+    "mcp:client": "tsx src/mcp/client.ts",
+    "mcp:http-server": "tsx src/mcp/http-server.ts",
+    "mcp:http-client": "tsx src/mcp/http-client.ts",
+    "mcp:agent": "tsx src/mcp/agent.ts",
+    "framework:agents": "tsx src/frameworks/agents-sdk.ts",
+    "example:api": "tsx src/examples/api-tools.ts",
+    "example:database": "tsx src/examples/database-tools.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "prod": "node dist/index.js",
-    "rag:ingest": "tsx src/rag/ingest-documents.ts",
-    "rag:search": "tsx src/rag/search-documents.ts"
+    "prod": "node dist/index.js"
   },
   "engines": {
     "node": ">=24"
@@ -18,6 +27,11 @@
   "author": "Vitor Esteves",
   "license": "ISC",
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.3.0",
+    "@modelcontextprotocol/express": "^2.0.2",
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "@openai/agents": "^0.18.0",
     "dotenv": "^17.4.2",
     "express": "5.1.0",
     "openai": "7.10.0",
